@@ -6,8 +6,10 @@ pub enum ErrorKind {
     InvalidToken(String),
     #[error("Expected '{0}' got token '{1:?}'")]
     ExpectedToken(String, TokenKind),
-    #[error("Could not find {0}")]
+    #[error("Could not find '{0}'")]
     NotFound(String),
+    #[error("'{0}' has been already used")]
+    AlreadyUsed(String),
     #[error("Expected a {0}")]
     UnexpectedType(&'static str),
     #[error("Unmatched {0}")]

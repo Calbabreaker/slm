@@ -3,6 +3,7 @@ use std::{path::Path, process::Command};
 fn compile(file: &Path) -> anyhow::Result<()> {
     let source = slm::Source::from_file(Path::new(&file))?;
     let asm = slm::compile(&source).map_err(|e| e.with_source(source))?;
+    println!("{asm}");
 
     let nasm_file = file.with_extension("asm");
     let object_file = file.with_extension("o");

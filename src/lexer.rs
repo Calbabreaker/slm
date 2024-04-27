@@ -1,6 +1,6 @@
 use std::{iter::Peekable, str::Chars};
 
-use crate::{Error, ErrorKind, Position};
+use crate::{Error, ErrorKind, NodeIdentifier, NodeLiteral, Position};
 
 #[derive(PartialEq, Eq, Clone, Debug)]
 pub enum Literal {
@@ -11,6 +11,8 @@ pub enum Literal {
 #[derive(PartialEq, Eq, Clone, Debug)]
 pub enum TokenKind {
     Identifier(String),
+    Let,
+    Equal,
     Return,
     SemiColon,
     Literal(Literal),
@@ -37,24 +39,25 @@ impl Token {
         }
     }
 
-    pub fn expect_identifier(self) -> crate::Result<(String, Position)> {
+    pub fn expect_identifier(self) -> crate::Result<NodeIdentifier> {
         match self.kind {
-            TokenKind::Identifier(value) => Ok((value, self.position)),
-            _ => Err(Error::new(
-                ErrorKind::ExpectedToken("Identifier".to_string(), self.kind),
-                self.position,
-            )),
+            TokenKind::Identifier(value) => Ok(NodeIdentifier(value, self.position)),
+            _ => Err(self.make_expect_error("Identifier"))?,
         }
     }
 
-    pub fn expect_literal(self) -> crate::Result<(Literal, Position)> {
+    pub fn expect_literal(self) -> crate::Result<NodeLiteral> {
         match self.kind {
-            TokenKind::Literal(value) => Ok((value, self.position)),
-            _ => Err(Error::new(
-                ErrorKind::ExpectedToken("Literal".to_string(), self.kind),
-                self.position,
-            )),
+            TokenKind::Literal(value) => Ok(NodeLiteral(value, self.position)),
+            _ => Err(self.make_expect_error("Literal"))?,
         }
+    }
+
+    pub fn make_expect_error(&self, message: impl Into<String>) -> Error {
+        Error::new(
+            ErrorKind::ExpectedToken(message.into(), self.kind.clone()),
+            self.position,
+        )
     }
 }
 
@@ -112,6 +115,7 @@ impl<'a> Lexer<'a> {
             ';' => TokenKind::SemiColon,
             '(' => TokenKind::OpenBracket,
             ')' => TokenKind::CloseBracket,
+            '=' => TokenKind::Equal,
             '#' => {
                 loop {
                     // Keep consuming until reach a new line to ignore tokens
@@ -152,6 +156,7 @@ impl<'a> Lexer<'a> {
 
                 match self.substr() {
                     "return" => TokenKind::Return,
+                    "let" => TokenKind::Let,
                     substr => TokenKind::Identifier(substr.to_owned()),
                 }
             }
