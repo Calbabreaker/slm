@@ -3,12 +3,12 @@ use std::fmt::Write;
 use crate::{Error, ErrorKind, Literal, NodeCall, NodeRoot};
 
 #[derive(Default)]
-pub struct Compiler {
+pub struct AsmGenerator {
     out: String,
 }
 
-impl Compiler {
-    pub fn compile(mut self, root: NodeRoot) -> crate::Result<String> {
+impl AsmGenerator {
+    pub fn generate(mut self, root: NodeRoot) -> crate::Result<String> {
         self.out = "global _start\n_start:\n".to_string();
         for node in root.statements {
             self.compile_call(node)?;

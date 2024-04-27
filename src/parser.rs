@@ -34,6 +34,7 @@ impl Parser {
     pub fn parse(mut self) -> crate::Result<NodeRoot> {
         let mut node_root = NodeRoot::default();
 
+        // Tokens will always end with EOF
         while self.peek_token().kind != TokenKind::EOF {
             let token = self.next_token();
             if let TokenKind::Identifier(identifier) = token.kind {
@@ -69,10 +70,10 @@ impl Parser {
     }
 
     fn next_token(&mut self) -> Token {
-        self.tokens.next().unwrap_or(Token::EOF.clone())
+        self.tokens.next().unwrap()
     }
 
     fn peek_token(&mut self) -> &Token {
-        self.tokens.peek().unwrap_or(Token::EOF)
+        self.tokens.peek().unwrap()
     }
 }

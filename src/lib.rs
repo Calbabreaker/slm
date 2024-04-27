@@ -1,9 +1,9 @@
-mod compiler;
+mod asm_generator;
 mod error;
 mod lexer;
 mod parser;
 
-pub use compiler::*;
+pub use asm_generator::*;
 pub use error::*;
 pub use lexer::*;
 pub use parser::*;
@@ -28,6 +28,6 @@ impl Source {
 pub fn compile(source: &Source) -> crate::Result<String> {
     let tokens = Lexer::new(&source.code).parse()?;
     let tree = Parser::new(tokens).parse()?;
-    let asm = Compiler::default().compile(tree)?;
+    let asm = AsmGenerator::default().generate(tree)?;
     Ok(asm)
 }

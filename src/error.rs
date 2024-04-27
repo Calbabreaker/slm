@@ -2,15 +2,15 @@ use crate::{Source, TokenKind};
 
 #[derive(thiserror::Error, Debug, PartialEq, Eq, Clone)]
 pub enum ErrorKind {
-    #[error("SyntaxError: Invalid token {0:?}")]
+    #[error("Invalid token {0:?}")]
     InvalidToken(String),
-    #[error("SyntaxError: Expected {0} got token '{1:?}'")]
+    #[error("Expected {0} got token '{1:?}'")]
     ExpectedToken(&'static str, TokenKind),
-    #[error("SyntaxError: Could not find {0}")]
+    #[error("Could not find {0}")]
     NotFound(String),
-    #[error("UnexpectedType: Expected a {0}")]
+    #[error("Expected a {0}")]
     UnexpectedType(&'static str),
-    #[error("SyntaxError: Unmatched {0}")]
+    #[error("Unmatched {0}")]
     Unmatched(&'static str),
 }
 
@@ -77,17 +77,20 @@ impl std::fmt::Display for ErrorWithSource {
 
         // Print the code snippet
         let mut lines = self.source.code.lines();
-        let line_code = lines.nth(position.line).ok_or(std::fmt::Error)?;
-        writeln!(f, " {} | {}", line_num, line_code)?;
+        if let Some(line_code) = lines.nth(position.line) {
+            writeln!(f, " {} | {}", line_num, line_code)?;
 
-        // Show where the error is in the snippet
-        write!(
-            f,
-            "{}    {}{}",
-            padding,
-            " ".repeat(position.column),
-            "^".repeat(position.length)
-        )
+            // Show where the error is in the snippet
+            write!(
+                f,
+                "{}    {}{}",
+                padding,
+                " ".repeat(position.column),
+                "^".repeat(position.length)
+            )?;
+        }
+
+        Ok(())
     }
 }
 

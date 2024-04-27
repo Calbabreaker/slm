@@ -28,8 +28,6 @@ impl Token {
     pub const fn new(kind: TokenKind, position: Position) -> Self {
         Self { kind, position }
     }
-
-    pub const EOF: &'static Self = &Self::new(TokenKind::EOF, Position::ZERO);
 }
 
 pub struct Lexer<'a> {
@@ -55,13 +53,18 @@ impl<'a> Lexer<'a> {
         loop {
             match self.next_token() {
                 Err(kind) => Err(Error::new(kind, self.current_position))?,
-                Ok(TokenKind::EOF) => break,
                 Ok(TokenKind::Ignore) => (),
                 Ok(token) => {
-                    tokens.push(Token::new(token, self.current_position));
+                    let token = Token::new(token, self.current_position);
                     self.current_position.column += self.current_position.length;
+
+                    if token.kind == TokenKind::EOF {
+                        tokens.push(token);
+                        break;
+                    }
+                    tokens.push(token);
                 }
-            };
+            }
         }
 
         Ok(tokens)
@@ -90,7 +93,6 @@ impl<'a> Lexer<'a> {
                 TokenKind::Ignore
             }
             '"' => {
-                self.current_position.column += 1;
                 loop {
                     let char = self.peek_char();
                     if char == '\n' || char == '\0' {
@@ -124,7 +126,10 @@ impl<'a> Lexer<'a> {
 
                 TokenKind::Literal(Literal::Integer(self.substr().parse().unwrap()))
             }
-            char if char.is_whitespace() => TokenKind::Ignore,
+            char if char.is_whitespace() => {
+                self.current_position.column += 1;
+                TokenKind::Ignore
+            }
             _ => Err(ErrorKind::InvalidToken(self.substr().to_string()))?,
         })
     }
