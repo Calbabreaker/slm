@@ -4,8 +4,8 @@ use crate::{Source, TokenKind};
 pub enum ErrorKind {
     #[error("Invalid token {0:?}")]
     InvalidToken(String),
-    #[error("Expected {0} got token '{1:?}'")]
-    ExpectedToken(&'static str, TokenKind),
+    #[error("Expected '{0}' got token '{1:?}'")]
+    ExpectedToken(String, TokenKind),
     #[error("Could not find {0}")]
     NotFound(String),
     #[error("Expected a {0}")]

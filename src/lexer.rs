@@ -14,6 +14,8 @@ pub enum TokenKind {
     Return,
     SemiColon,
     Literal(Literal),
+    OpenBracket,
+    CloseBracket,
     Ignore,
     EOF,
 }
@@ -22,6 +24,38 @@ pub enum TokenKind {
 pub struct Token {
     pub kind: TokenKind,
     pub position: Position,
+}
+
+impl Token {
+    pub fn expect(&self, kind: TokenKind) -> crate::Result<()> {
+        match self.kind == kind {
+            true => Ok(()),
+            false => Err(Error::new(
+                ErrorKind::ExpectedToken(format!("{:?}", kind), self.kind.clone()),
+                self.position,
+            )),
+        }
+    }
+
+    pub fn expect_identifier(self) -> crate::Result<(String, Position)> {
+        match self.kind {
+            TokenKind::Identifier(value) => Ok((value, self.position)),
+            _ => Err(Error::new(
+                ErrorKind::ExpectedToken("Identifier".to_string(), self.kind),
+                self.position,
+            )),
+        }
+    }
+
+    pub fn expect_literal(self) -> crate::Result<(Literal, Position)> {
+        match self.kind {
+            TokenKind::Literal(value) => Ok((value, self.position)),
+            _ => Err(Error::new(
+                ErrorKind::ExpectedToken("Literal".to_string(), self.kind),
+                self.position,
+            )),
+        }
+    }
 }
 
 impl Token {
@@ -48,21 +82,21 @@ impl<'a> Lexer<'a> {
     }
 
     pub fn parse(mut self) -> crate::Result<Vec<Token>> {
-        let mut tokens = Vec::new();
+        let mut tokens: Vec<Token> = Vec::new();
 
         loop {
             match self.next_token() {
                 Err(kind) => Err(Error::new(kind, self.current_position))?,
                 Ok(TokenKind::Ignore) => (),
+                Ok(TokenKind::EOF) => {
+                    // Get the last token position when EOF or it will show nothing
+                    let position = tokens.last().map(|p| p.position).unwrap_or_default();
+                    tokens.push(Token::new(TokenKind::EOF, position));
+                    break;
+                }
                 Ok(token) => {
-                    let token = Token::new(token, self.current_position);
+                    tokens.push(Token::new(token, self.current_position));
                     self.current_position.column += self.current_position.length;
-
-                    if token.kind == TokenKind::EOF {
-                        tokens.push(token);
-                        break;
-                    }
-                    tokens.push(token);
                 }
             }
         }
@@ -76,6 +110,8 @@ impl<'a> Lexer<'a> {
         Ok(match self.next_char() {
             '\0' => TokenKind::EOF,
             ';' => TokenKind::SemiColon,
+            '(' => TokenKind::OpenBracket,
+            ')' => TokenKind::CloseBracket,
             '#' => {
                 loop {
                     // Keep consuming until reach a new line to ignore tokens

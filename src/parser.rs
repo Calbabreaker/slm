@@ -1,6 +1,6 @@
 use std::iter::Peekable;
 
-use crate::{Error, ErrorKind, Literal, Position, Token, TokenKind};
+use crate::{Error, Literal, Position, Token, TokenKind};
 
 pub struct NodeCall {
     pub identifier: String,
@@ -34,39 +34,25 @@ impl Parser {
     pub fn parse(mut self) -> crate::Result<NodeRoot> {
         let mut node_root = NodeRoot::default();
 
-        // Tokens will always end with EOF
+        // Token list will always end with EOF
         while self.peek_token().kind != TokenKind::EOF {
-            let token = self.next_token();
-            if let TokenKind::Identifier(identifier) = token.kind {
-                node_root.statements.push(NodeCall {
-                    identifier,
-                    identifier_position: token.position,
-                    argument: self.parse_expr()?,
-                });
-            } else {
-                return Err(Error::new(
-                    ErrorKind::ExpectedToken("identifer", token.kind),
-                    token.position,
-                ));
-            }
+            let (identifier, position) = self.next_token().expect_identifier()?;
+            self.next_token().expect(TokenKind::OpenBracket)?;
+            node_root.statements.push(NodeCall {
+                identifier,
+                identifier_position: position,
+                argument: self.parse_expr()?,
+            });
+            self.next_token().expect(TokenKind::CloseBracket)?;
+            self.next_token().expect(TokenKind::SemiColon)?;
         }
 
         Ok(node_root)
     }
 
     fn parse_expr(&mut self) -> Result<NodeExpression, Error> {
-        let token = self.next_token();
-        if let TokenKind::Literal(literal) = token.kind {
-            Ok(NodeExpression {
-                literal,
-                position: token.position,
-            })
-        } else {
-            Err(Error::new(
-                ErrorKind::ExpectedToken("literal", token.kind),
-                token.position,
-            ))
-        }
+        let (literal, position) = self.next_token().expect_literal()?;
+        Ok(NodeExpression { literal, position })
     }
 
     fn next_token(&mut self) -> Token {
