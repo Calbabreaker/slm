@@ -1,7 +1,8 @@
 use std::{collections::HashMap, fmt::Write};
 
-use crate::{Literal, NodeExpr, NodeProgram, NodeStmt, NodeStmtCall};
+use crate::{Literal, NodeCall, NodeExpression, NodeProgram, NodeStatement};
 
+#[derive(Debug)]
 pub struct Variable {
     stack_location: usize,
 }
@@ -17,38 +18,38 @@ impl AsmGenerator {
     pub fn generate(mut self, program: NodeProgram) -> crate::Result<String> {
         self.out = "global _start\n_start:\n".to_string();
         for stmt in program.statements {
-            self.generate_stmt(stmt)?;
+            self.generate_statment(stmt)?;
         }
 
         Ok(self.out)
     }
 
-    fn generate_stmt(&mut self, stmt: NodeStmt) -> crate::Result<()> {
-        match stmt {
-            NodeStmt::Call(call) => {
+    fn generate_statment(&mut self, statement: NodeStatement) -> crate::Result<()> {
+        match statement {
+            NodeStatement::Call(call) => {
                 self.generate_call(call)?;
             }
-            NodeStmt::Let(let_stmt) => {
-                if self.variables.contains_key(&let_stmt.identifier.0) {
-                    Err(let_stmt.identifier.make_already_used_error())?;
+            NodeStatement::Let(node_let) => {
+                if self.variables.contains_key(&node_let.identifier.0) {
+                    Err(node_let.identifier.make_already_used_error())?;
                 }
 
+                self.generate_expression(node_let.expression)?;
                 self.variables.insert(
-                    let_stmt.identifier.0,
+                    node_let.identifier.0,
                     Variable {
                         stack_location: self.stack_size,
                     },
                 );
-                self.generate_expr(let_stmt.expression)?;
             }
         }
         Ok(())
     }
 
-    fn generate_call(&mut self, call: NodeStmtCall) -> crate::Result<()> {
+    fn generate_call(&mut self, call: NodeCall) -> crate::Result<()> {
         match call.identifier.0.as_str() {
             "exit" => {
-                self.generate_expr(call.argument)?;
+                self.generate_expression(call.argument)?;
                 // syscall for exit
                 self.write("mov rax, 0x3c");
                 self.generate_pop("rdi");
@@ -60,18 +61,22 @@ impl AsmGenerator {
         Ok(())
     }
 
-    fn generate_expr(&mut self, expr: NodeExpr) -> crate::Result<()> {
-        match expr {
-            NodeExpr::Literal(literal) => match literal.0 {
+    fn generate_expression(&mut self, expression: NodeExpression) -> crate::Result<()> {
+        match expression {
+            NodeExpression::Literal(literal) => match literal.0 {
                 Literal::Integer(integer) => self.generate_push(integer.to_string()),
                 Literal::String(_) => unimplemented!(),
             },
-            NodeExpr::Identifer(identifer) => {
+            NodeExpression::Identifer(identifer) => {
                 let variable = self
                     .variables
                     .get(&identifer.0)
                     .ok_or(identifer.make_not_found_error())?;
-                self.generate_push(format!("QWORD [rsp + {}]", variable.stack_location))
+                dbg!(self.stack_size);
+                self.generate_push(format!(
+                    "QWORD [rsp+{}]",
+                    self.stack_size - variable.stack_location
+                ))
             }
         }
         Ok(())
@@ -83,9 +88,9 @@ impl AsmGenerator {
         self.stack_size += size;
     }
 
-    fn generate_pop(&mut self, value: &str) {
+    fn generate_pop(&mut self, value: impl AsRef<str>) {
         let size = 8; // currently only 64-bit integers supported
-        self.write(format!("pop {value}"));
+        self.write(format!("pop {}", value.as_ref()));
         self.stack_size -= size;
     }
 

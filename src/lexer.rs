@@ -10,7 +10,7 @@ pub enum Literal {
 
 #[derive(PartialEq, Eq, Clone, Debug)]
 pub enum TokenKind {
-    Identifier(String),
+    Ident(String),
     Let,
     Equal,
     Return,
@@ -41,7 +41,7 @@ impl Token {
 
     pub fn expect_identifier(self) -> crate::Result<NodeIdentifier> {
         match self.kind {
-            TokenKind::Identifier(value) => Ok(NodeIdentifier(value, self.position)),
+            TokenKind::Ident(value) => Ok(NodeIdentifier(value, self.position)),
             _ => Err(self.make_expect_error("Identifier"))?,
         }
     }
@@ -157,7 +157,7 @@ impl<'a> Lexer<'a> {
                 match self.substr() {
                     "return" => TokenKind::Return,
                     "let" => TokenKind::Let,
-                    substr => TokenKind::Identifier(substr.to_owned()),
+                    substr => TokenKind::Ident(substr.to_owned()),
                 }
             }
             char if char.is_ascii_digit() => {
